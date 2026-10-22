@@ -4,7 +4,7 @@ import { CATS } from '../categories'
 import { briefNodes, briefOf } from '../brief'
 import { headlineOf } from '../headline'
 import type { ContextViewProps } from '../services'
-import { conversationNodesOf, headersOf, imageLoaderOf, projectionOf, unsupportedOf } from '../services'
+import { conversationNodesOf, headersOf, imageLoaderOf, numOf, projectionOf, unsupportedOf } from '../services'
 import type { ClientCtx, ConversationNodeLike } from '../services'
 import { makeContentFetcher, makeHeaderFetcher, useHistoryFace } from '../historyPage'
 import { useContextSession } from '../sessionData'
@@ -42,6 +42,7 @@ import { useLazyMount } from './useLazyMount'
 import { trendBandsOf } from '../dna'
 import type { TrendBand } from '../dna'
 
+import { cacheHitPercent } from '../format'
 import { activateViewTab, openContextSidebar, subscribeContextFocus, takeContextFocus } from '../viewFocus'
 import { revealInScrollParent } from '../revealScroll'
 import { makeErrorBoundary } from './errorBoundary'
@@ -178,6 +179,11 @@ export function makeContextView(
       setAdaptive(false)
     }, [data, sessionId, overviewAutoAt])
     const [durationCurve, setDurationCurve] = useState(() => settings.defaultDurationCurve() === 'show')
+    // Compact starts with the stats band folded behind its digest; the fold itself is view-local, so opening it
+    // never rewrites the preference. A null toggle follows the preference until the reader opens or folds it.
+    const compact = settings.panelDensity() === 'compact'
+    const [folded, setFolded] = useState<boolean | null>(null)
+    const bandOpen = folded ?? !compact
     const [focusTurn, setFocusTurn] = useState<number | null>(null)
     // A step the trend must scroll to and hold on screen (a boundary event row's jump).
     const [focusSeq, setFocusSeq] = useState<number | null>(null)
@@ -832,22 +838,50 @@ export function makeContextView(
       />
     )
 
+    const billed = usage === null
+      ? 0
+      : numOf(usage.uncachedInputTokens) + numOf(usage.cacheReadTokens) + numOf(usage.cacheWriteTokens)
+    const hit = cacheHitPercent(usage === null ? 0 : numOf(usage.cacheReadTokens), billed)
+    const digest = t('density.digest', {
+      turns: counts.turns,
+      steps: counts.steps,
+      hit: hit === null ? '—' : `${hit}%`,
+    })
+
     return (
       <div className="lc-root" ref={rootRef}>
 
-        {inSidebar ? null : (
-          <div className="lc-cols lc-head">
-            <StatsContext counts={counts} humanInputs={data.humanInputs} answers={data.answers} toolCalls={data.toolCalls}
-              files={ioTotals} tools={toolTally}
-              cost={data.cost} locale={activeLocale} sessionId={typeof sessionId === 'string' ? sessionId : undefined}
-              onJump={onJump} onTeamClick={hasFamilyView ? onTeamClick : undefined} />
-            <PluginInfo />
+        {compact ? (
+          <div className="lc-head-digest">
+            <span className="lc-head-digest-text">{digest}</span>
+            <button
+              type="button"
+              className="lc-gran-btn"
+              aria-expanded={bandOpen}
+              onClick={() => { setFolded(!bandOpen) }}
+            >
+              {t(bandOpen ? 'density.fold' : 'density.expand')}
+            </button>
           </div>
+        ) : null}
+
+        {compact && !bandOpen ? null : (
+          <>
+            {inSidebar ? null : (
+              <div className="lc-cols lc-head">
+                <StatsContext counts={counts} humanInputs={data.humanInputs} answers={data.answers} toolCalls={data.toolCalls}
+                  files={ioTotals} tools={toolTally}
+                  cost={data.cost} locale={activeLocale} sessionId={typeof sessionId === 'string' ? sessionId : undefined}
+                  onJump={onJump} onTeamClick={hasFamilyView ? onTeamClick : undefined} />
+                <PluginInfo />
+              </div>
+            )}
+            <div className="lc-cols lc-head">
+              <StatsTokens usage={usage} current={data.current} breakdown={breakdown} />
+              <StatsTiming timing={data.timing ?? null} spans={data.spans} locale={activeLocale} />
+            </div>
+          </>
         )}
-        <div className="lc-cols lc-head">
-          <StatsTokens usage={usage} current={data.current} breakdown={breakdown} />
-          <StatsTiming timing={data.timing ?? null} spans={data.spans} locale={activeLocale} />
-        </div>
 
         <div className="lc-cols lc-cols-main">
           <div className="lc-col flex-1 min-w-[min(360px,100%)]" ref={leftColRef}>{compositionCard}{trendCard}</div>

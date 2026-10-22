@@ -87,6 +87,27 @@ describe('ContextView — locale and settings', () => {
     assert.deepEqual(queryAll(m.container, '.lc-fa-row').map(r => r.title), ['/a.ts', '/z.ts'])
     await m.unmount()
   })
+
+  test('the compact density folds the stats band behind a digest that reopens on demand', async () => {
+    const View = makeView(new TestClientCtx(), settingsWith({ panelDensity: 'compact' }))
+    const m = await mount(h(View, {
+      sessionId: 'sv-compact',
+      useProjection: projectionsFor(richTimeline()),
+    }))
+    await flush()
+    const digest = query(m.container, '.lc-head-digest')
+    assert.ok(digest, 'the band is folded into one digest line')
+    assert.match(text(digest), /\d+ turns · \d+ steps · \S+ cache hit/)
+    assert.equal(queryAll(m.container, '.lc-head').length, 0, 'neither stats row mounts while folded')
+
+    await click(buttonByText(m.container, DICT_EN['density.expand']))
+    assert.ok(query(m.container, '.lc-head-digest'), 'the digest line keeps the toggle')
+    assert.equal(queryAll(m.container, '.lc-head').length, 2, 'opening restores both stats rows')
+
+    await click(buttonByText(m.container, DICT_EN['density.fold']))
+    assert.equal(queryAll(m.container, '.lc-head').length, 0, 'the row can be folded again')
+    await m.unmount()
+  })
 })
 
 describe('ContextView — error boundary', () => {

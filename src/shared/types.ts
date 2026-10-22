@@ -179,6 +179,9 @@ export type DefaultOverviewRange = 'today' | '7d' | '30d' | 'all'
 /** Whether the Fleet conversation tab is served. */
 export type FleetTab = 'show' | 'hide'
 
+/** The panel's stats band: 'compact' folds it behind a one-line digest, 'full' shows the cards. */
+export type PanelDensity = 'compact' | 'full'
+
 export interface PluginSettings {
   defaultPlacement: DefaultPlacement
   defaultGranularity: DefaultGranularity
@@ -191,6 +194,7 @@ export interface PluginSettings {
   overviewAutoSteps: OverviewAutoSteps
   defaultOverviewRange: DefaultOverviewRange
   fleetTab: FleetTab
+  panelDensity: PanelDensity
   /** Free text joined ahead of the harness's assembled system prompt; empty disables. */
   promptPrefix: string
   /** Free text joined behind the harness's assembled system prompt; empty disables. */

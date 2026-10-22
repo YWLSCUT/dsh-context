@@ -14,7 +14,7 @@ function hookFor(state: SettingsState) {
 }
 
 function stateOf(partial: Partial<SettingsState> = {}): SettingsState {
-  return { status: 'ready', placement: 'all', granularity: 'step', mode: 'total', deltaBase: 'step', toolSort: 'count', fileSort: 'count', insightsEntry: 'show', durationCurve: 'show', overviewAutoSteps: '200', overviewRange: '30d', fleetTab: 'show', promptPrefix: '', promptSuffix: '', writable: true, ...partial }
+  return { status: 'ready', placement: 'all', granularity: 'step', mode: 'total', deltaBase: 'step', toolSort: 'count', fileSort: 'count', insightsEntry: 'show', durationCurve: 'show', overviewAutoSteps: '200', overviewRange: '30d', fleetTab: 'show', panelDensity: 'full', promptPrefix: '', promptSuffix: '', writable: true, ...partial }
 }
 
 /** Menu items portaled into document.body while a select is open. */
@@ -36,7 +36,7 @@ describe('PluginConfigCard (the Plugins-page seat)', () => {
     await m2.unmount()
   })
 
-  test('renders the eleven selects and the two prompt text rows across three titled groups — no card chrome', async () => {
+  test('renders the twelve selects and the two prompt text rows across three titled groups — no card chrome', async () => {
     const m = await mount(h(PluginConfigCard, { useContextSettings: hookFor(stateOf({ status: 'loading', writable: false })) }))
     assert.equal(m.container.querySelector('.lc-settings-card'), null, 'no settings-section chrome')
     assert.ok(query(m.container, '.lc-settings-prefs'))
@@ -48,7 +48,7 @@ describe('PluginConfigCard (the Plugins-page seat)', () => {
       DICT_EN['settings.group.prompt'],
     ])
     const selects = queryAll<HTMLButtonElement>(m.container, '.lc-settings-select')
-    assert.equal(selects.length, 11)
+    assert.equal(selects.length, 12)
     assert.ok(selects.every(s => s.disabled), 'loading is not ready: the rows are disabled')
     const textareas = queryAll<HTMLTextAreaElement>(m.container, '.lc-settings-textarea')
     assert.equal(textareas.length, 2)
@@ -255,6 +255,22 @@ describe('PluginConfigCard (the Plugins-page seat)', () => {
     await click(selects[0])
     assert.equal(selects[0].getAttribute('aria-expanded'), 'false')
     assert.equal(document.body.querySelector('[role="menu"]'), null)
+    await m.unmount()
+  })
+
+  test('the stats-band density row picks the compact panel', async () => {
+    const calls: [string, string][] = []
+    const m = await mount(h(PluginConfigCard, {
+      useContextSettings: hookFor(stateOf()),
+      set: (field, value) => { calls.push([field, value]) },
+    }))
+    const selects = queryAll<HTMLButtonElement>(m.container, '.lc-settings-select')
+    assert.ok(text(m.container).includes(DICT_EN['settings.density']))
+    assert.ok(text(selects[11]).includes(DICT_EN['density.full']))
+    await click(selects[11])
+    assert.deepEqual(menuItems().map(i => text(i)), [DICT_EN['density.compact'], DICT_EN['density.full']])
+    await click(menuItems()[0]) // 'Compact'
+    assert.deepEqual(calls, [['panelDensity', 'compact']])
     await m.unmount()
   })
 

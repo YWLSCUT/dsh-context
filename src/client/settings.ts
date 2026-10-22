@@ -1,7 +1,7 @@
 /** The plugin's user-settings binding (browser half): the Host-served `dsh-context` namespace carries per-user
  * display preferences, degrading to the schema defaults wherever that surface is absent or read-only. */
 
-import type { DefaultDeltaBase, DefaultFileSort, DefaultGranularity, DefaultDurationCurve, DefaultOverviewRange, DefaultPlacement, DefaultToolSort, DefaultTrendMode, FleetTab, InsightsEntry, OverviewAutoSteps, SettingsField } from '../shared/types'
+import type { DefaultDeltaBase, DefaultFileSort, DefaultGranularity, DefaultDurationCurve, DefaultOverviewRange, DefaultPlacement, DefaultToolSort, DefaultTrendMode, FleetTab, InsightsEntry, OverviewAutoSteps, PanelDensity, SettingsField } from '../shared/types'
 
 export type { DefaultDeltaBase, DefaultFileSort, DefaultToolSort, SettingsField } from '../shared/types'
 
@@ -38,6 +38,7 @@ export interface SettingsState {
   overviewAutoSteps: OverviewAutoSteps
   overviewRange: DefaultOverviewRange
   fleetTab: FleetTab
+  panelDensity: PanelDensity
   promptPrefix: string
   promptSuffix: string
   writable: boolean
@@ -57,6 +58,7 @@ export interface ContextSettings {
   overviewAutoSteps(): OverviewAutoSteps
   defaultOverviewRange(): DefaultOverviewRange
   fleetTab(): FleetTab
+  panelDensity(): PanelDensity
   attach(scope: SettingsScopeLike): () => void
   /** Persist one preference choice (local echo, then the fenced scope write). */
   set(field: SettingsField, value: string): void
@@ -74,9 +76,13 @@ type Prefs = {
   overviewAutoSteps?: OverviewAutoSteps
   overviewRange?: DefaultOverviewRange
   fleetTab?: FleetTab
+  panelDensity?: PanelDensity
   promptPrefix?: string
   promptSuffix?: string
 }
+
+/** The preferences a refused write rolls back to, per field kind. */
+type Refused = { placement?: DefaultPlacement; insightsEntry?: InsightsEntry; fleetTab?: FleetTab; panelDensity?: PanelDensity }
 
 function prefsOf(value: unknown): Prefs {
   if (value === null || typeof value !== 'object') return {}
@@ -93,13 +99,14 @@ function prefsOf(value: unknown): Prefs {
     ...(v.overviewAutoSteps === '100' || v.overviewAutoSteps === '200' || v.overviewAutoSteps === '300' || v.overviewAutoSteps === 'off' ? { overviewAutoSteps: v.overviewAutoSteps } : {}),
     ...(v.defaultOverviewRange === 'today' || v.defaultOverviewRange === '7d' || v.defaultOverviewRange === '30d' || v.defaultOverviewRange === 'all' ? { overviewRange: v.defaultOverviewRange } : {}),
     ...(v.fleetTab === 'show' || v.fleetTab === 'hide' ? { fleetTab: v.fleetTab } : {}),
+    ...(v.panelDensity === 'compact' || v.panelDensity === 'full' ? { panelDensity: v.panelDensity } : {}),
     ...(typeof v.promptPrefix === 'string' ? { promptPrefix: v.promptPrefix } : {}),
     ...(typeof v.promptSuffix === 'string' ? { promptSuffix: v.promptSuffix } : {}),
   }
 }
 
 export function createContextSettings(): ContextSettings {
-  let state: SettingsState = { status: 'loading', placement: 'all', granularity: 'step', mode: 'total', deltaBase: 'step', toolSort: 'count', fileSort: 'count', insightsEntry: 'show', durationCurve: 'show', overviewAutoSteps: '200', overviewRange: '30d', fleetTab: 'show', promptPrefix: '', promptSuffix: '', writable: false }
+  let state: SettingsState = { status: 'loading', placement: 'all', granularity: 'step', mode: 'total', deltaBase: 'step', toolSort: 'count', fileSort: 'count', insightsEntry: 'show', durationCurve: 'show', overviewAutoSteps: '200', overviewRange: '30d', fleetTab: 'show', panelDensity: 'full', promptPrefix: '', promptSuffix: '', writable: false }
   let scope: SettingsScopeLike | undefined
   const listeners = new Set<() => void>()
   /** Every field is a scalar, so a shallow compare is the store's identity check — and a new preference
@@ -111,7 +118,7 @@ export function createContextSettings(): ContextSettings {
     state = next
     for (const listener of listeners) listener()
   }
-  const sync = (bound: SettingsScopeLike): { placement?: DefaultPlacement; insightsEntry?: InsightsEntry; fleetTab?: FleetTab } => {
+  const sync = (bound: SettingsScopeLike): Refused => {
     const snap = bound.getSnapshot()
     // Bounded catch (the compatibility.md parser gate): a value that throws on property access
     // keeps the current state instead of throwing into the mirror's fan-out.
@@ -136,11 +143,12 @@ export function createContextSettings(): ContextSettings {
       overviewAutoSteps: prefs.overviewAutoSteps ?? (raw?.overviewAutoSteps === undefined ? state.overviewAutoSteps : '200'),
       overviewRange: prefs.overviewRange ?? (raw?.defaultOverviewRange === undefined ? state.overviewRange : '30d'),
       fleetTab: prefs.fleetTab ?? (raw?.fleetTab === undefined ? state.fleetTab : 'show'),
+      panelDensity: prefs.panelDensity ?? (raw?.panelDensity === undefined ? state.panelDensity : 'full'),
       promptPrefix: prefs.promptPrefix ?? (raw?.promptPrefix === undefined ? state.promptPrefix : ''),
       promptSuffix: prefs.promptSuffix ?? (raw?.promptSuffix === undefined ? state.promptSuffix : ''),
       writable: snap.writable,
     })
-    return { placement: prefs.placement, insightsEntry: prefs.insightsEntry, fleetTab: prefs.fleetTab }
+    return { placement: prefs.placement, insightsEntry: prefs.insightsEntry, fleetTab: prefs.fleetTab, panelDensity: prefs.panelDensity }
   }
   return {
     store: {
@@ -161,6 +169,7 @@ export function createContextSettings(): ContextSettings {
     overviewAutoSteps: () => state.overviewAutoSteps,
     defaultOverviewRange: () => state.overviewRange,
     fleetTab: () => state.fleetTab,
+    panelDensity: () => state.panelDensity,
     attach(bound) {
       scope = bound
       sync(bound)
@@ -185,6 +194,7 @@ export function createContextSettings(): ContextSettings {
         if (field === 'defaultPlacement' && truth.placement === undefined) refused.placement = 'all'
         else if (field === 'insightsEntry' && truth.insightsEntry === undefined) refused.insightsEntry = 'show'
         else if (field === 'fleetTab' && truth.fleetTab === undefined) refused.fleetTab = 'show'
+        else if (field === 'panelDensity' && truth.panelDensity === undefined) refused.panelDensity = 'full'
         if (Object.keys(refused).length > 0) publish({ ...state, ...refused })
       })
     },

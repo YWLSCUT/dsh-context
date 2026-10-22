@@ -36,6 +36,7 @@ describe('Config validator (cordis Standard Schema face)', () => {
       overviewAutoSteps: '200',
       defaultOverviewRange: '30d',
       fleetTab: 'show',
+      panelDensity: 'full',
       promptPrefix: '',
       promptSuffix: '',
     })
@@ -75,7 +76,7 @@ describe('Config validator (cordis Standard Schema face)', () => {
 describe('preference fields (the Config-form generation surface)', () => {
   test('every preference is volatile-marked; the bounds are not', () => {
     const dict = Config.dict ?? {}
-    for (const pref of ['defaultPlacement', 'defaultGranularity', 'defaultTrendMode', 'defaultDeltaBase', 'defaultToolSort', 'defaultFileSort', 'insightsEntry', 'defaultDurationCurve', 'overviewAutoSteps', 'defaultOverviewRange', 'fleetTab', 'promptPrefix', 'promptSuffix']) {
+    for (const pref of ['defaultPlacement', 'defaultGranularity', 'defaultTrendMode', 'defaultDeltaBase', 'defaultToolSort', 'defaultFileSort', 'insightsEntry', 'defaultDurationCurve', 'overviewAutoSteps', 'defaultOverviewRange', 'fleetTab', 'panelDensity', 'promptPrefix', 'promptSuffix']) {
       assert.equal((dict[pref] as z['dict'] extends undefined ? never : { meta?: { volatile?: boolean } }).meta?.volatile, true, pref)
     }
     for (const bound of ['maxRequestSteps', 'maxKeptTurns', 'maxEvents', 'maxNodes', 'maxArchiveNodes', 'maxFileOps']) {
@@ -96,17 +97,19 @@ describe('preference fields (the Config-form generation surface)', () => {
     assert.equal(deref(resolved.overviewAutoSteps), '200')
     assert.equal(deref(resolved.defaultOverviewRange), '30d')
     assert.equal(deref(resolved.fleetTab), 'show')
+    assert.equal(deref(resolved.panelDensity), 'full')
     assert.equal(deref(resolved.promptPrefix), '', 'a non-string prompt value degrades to the empty default')
     assert.equal(deref(resolved.promptSuffix), '')
   })
 
   test('a stored preference survives the resolve', () => {
-    const resolved = Config({ defaultPlacement: 'sidebar', insightsEntry: 'hide', overviewAutoSteps: 'off', defaultOverviewRange: '7d', fleetTab: 'hide', promptPrefix: 'Be terse.', promptSuffix: 'Sign as Atlas.' })
+    const resolved = Config({ defaultPlacement: 'sidebar', insightsEntry: 'hide', overviewAutoSteps: 'off', defaultOverviewRange: '7d', fleetTab: 'hide', panelDensity: 'compact', promptPrefix: 'Be terse.', promptSuffix: 'Sign as Atlas.' })
     assert.equal(deref(resolved.defaultPlacement), 'sidebar')
     assert.equal(deref(resolved.insightsEntry), 'hide')
     assert.equal(deref(resolved.overviewAutoSteps), 'off')
     assert.equal(deref(resolved.defaultOverviewRange), '7d')
     assert.equal(deref(resolved.fleetTab), 'hide')
+    assert.equal(deref(resolved.panelDensity), 'compact')
     assert.equal(deref(resolved.promptPrefix), 'Be terse.')
     assert.equal(deref(resolved.promptSuffix), 'Sign as Atlas.')
   })

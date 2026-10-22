@@ -60,10 +60,17 @@
  * the ring stacks over its legend, the cell grid folds), so the two-card
  * line is the trade this floor buys. Engines without container queries keep
  * the wide layout. The right Sidebar's panel renders only the donut row (it
- * drops the context stats / plugin info row — see contextView.tsx); the same wrap then stacks the pair in the narrow pane. */
+ * drops the context stats / plugin info row — see contextView.tsx); the same wrap then stacks the pair in the narrow pane.
+ * The compact preference folds both rows into the digest line below; the
+ * digest carries what neither remaining card shows (turns, steps, cache hit). */
 /* The context card's flow diagram stretches to the plugin card's height, so the row reads as one level band. */
 .lc-head > .lc-card:has(.lc-stats) { display: flex; flex-direction: column; }
 .lc-head .lc-stats { flex: 1; }
+/* Compact band: one digest line in place of both head rows. The fold is view-local (opening it writes no
+   preference), and the text wraps rather than pushing the pane into a horizontal scroll at narrow widths. */
+.lc-head-digest { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; min-width: 0; }
+.lc-head-digest-text { color: var(--dsw-alias-label-secondary); font-size: 12px; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
+.lc-head-digest .lc-gran-btn { margin-left: auto; }
 .lc-empty { color: var(--dsw-alias-label-secondary); padding: 18px 0; text-align: center; }
 .lc-error { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 40px 16px; }
 .lc-error-msg { font-family: var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 12px; color: var(--dsw-alias-state-error-primary); background: var(--dsw-alias-bg-layer-2); border: 1px solid var(--dsw-alias-border-l1); border-radius: 6px; padding: 4px 8px; max-width: 100%; overflow-wrap: anywhere; }

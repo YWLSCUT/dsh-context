@@ -55,6 +55,7 @@ describe('createContextSettings defaults', () => {
       overviewAutoSteps: '200',
       overviewRange: '30d',
       fleetTab: 'show',
+      panelDensity: 'full',
       promptPrefix: '',
       promptSuffix: '',
       writable: false,
@@ -70,6 +71,7 @@ describe('createContextSettings defaults', () => {
     assert.equal(s.overviewAutoSteps(), '200')
     assert.equal(s.defaultOverviewRange(), '30d')
     assert.equal(s.fleetTab(), 'show')
+    assert.equal(s.panelDensity(), 'full')
   })
 })
 
@@ -229,6 +231,27 @@ describe('set', () => {
     assert.equal(s.fleetTab(), 'hide')
   })
 
+  test('a rejected density write degrades to full when the scope carries no valid value', async () => {
+    const s = createContextSettings()
+    const scope = new TestSettingsScope({ status: 'ready', value: {}, writable: true })
+    s.attach(scope)
+    scope.failSet = true
+    s.set('panelDensity', 'compact')
+    assert.equal(s.panelDensity(), 'compact', 'the optimistic echo lands first')
+    await new Promise(resolve => setTimeout(resolve, 0))
+    assert.equal(s.panelDensity(), 'full', 'an unpersisted fold must not outlive the reload')
+  })
+
+  test('a rejected density write rolls back to the scope\'s valid truth', async () => {
+    const s = createContextSettings()
+    const scope = new TestSettingsScope({ status: 'ready', value: { panelDensity: 'compact' }, writable: true })
+    s.attach(scope)
+    scope.failSet = true
+    s.set('panelDensity', 'full')
+    await new Promise(resolve => setTimeout(resolve, 0))
+    assert.equal(s.panelDensity(), 'compact')
+  })
+
   test('a rejected prompt write rolls back to the scope truth', async () => {
     const s = createContextSettings()
     const scope = new TestSettingsScope({ status: 'ready', value: { promptPrefix: 'kept' }, writable: true })
@@ -258,6 +281,7 @@ describe('attach', () => {
         overviewAutoSteps: '300',
         defaultOverviewRange: '7d',
         fleetTab: 'hide',
+        panelDensity: 'compact',
         promptPrefix: 'Be terse.',
         promptSuffix: 'Sign as Atlas.',
       },
@@ -277,6 +301,7 @@ describe('attach', () => {
       overviewAutoSteps: '300',
       overviewRange: '7d',
       fleetTab: 'hide',
+      panelDensity: 'compact',
       promptPrefix: 'Be terse.',
       promptSuffix: 'Sign as Atlas.',
       writable: true,
@@ -314,6 +339,7 @@ describe('attach', () => {
         overviewAutoSteps: '200',
         overviewRange: '30d',
         fleetTab: 'show',
+        panelDensity: 'full',
         promptPrefix: '',
         promptSuffix: '',
         writable: false,
@@ -339,6 +365,7 @@ describe('attach', () => {
     assert.equal(s.overviewAutoSteps(), '200')
     assert.equal(s.defaultOverviewRange(), '30d')
     assert.equal(s.fleetTab(), 'show')
+    assert.equal(s.panelDensity(), 'full')
     assert.equal(s.store.getSnapshot().promptPrefix, '', 'a non-string prompt value degrades to the empty default')
     assert.equal(s.store.getSnapshot().promptSuffix, '')
   })
@@ -388,6 +415,15 @@ describe('attach', () => {
     const scope = new TestSettingsScope({ status: 'ready', value: { defaultOverviewRange: 'quarter' }, writable: false })
     s.attach(scope)
     assert.equal(s.defaultOverviewRange(), '30d')
+  })
+
+  test('an invalid scope density degrades to full instead of keeping the current one', () => {
+    const s = createContextSettings()
+    s.set('panelDensity', 'compact')
+    assert.equal(s.panelDensity(), 'compact')
+    const scope = new TestSettingsScope({ status: 'ready', value: { panelDensity: 'tiny' }, writable: false })
+    s.attach(scope)
+    assert.equal(s.panelDensity(), 'full')
   })
 
   test('explicit schema-default values are accepted', () => {
@@ -526,6 +562,7 @@ describe('attach', () => {
       overviewAutoSteps: '200',
       overviewRange: '30d',
       fleetTab: 'show',
+      panelDensity: 'full',
       promptPrefix: '',
       promptSuffix: '',
       writable: true,

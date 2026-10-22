@@ -227,6 +227,16 @@ function PreferenceRows(props: { t: Translate; state: SettingsState; set?: Setti
           ]}
           onPick={(id) => { set?.('defaultFileSort', id) }}
         />
+        <PrefRow
+          label={t('settings.density')}
+          value={state.panelDensity}
+          disabled={disabled}
+          options={[
+            { id: 'compact', label: t('density.compact') },
+            { id: 'full', label: t('density.full') },
+          ]}
+          onPick={(id) => { set?.('panelDensity', id) }}
+        />
       </Group>
       <Group title={t('settings.group.prompt')}>
         <p className="lc-settings-note">{t('settings.promptHint')}</p>
